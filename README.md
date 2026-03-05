@@ -2,6 +2,10 @@
 
 A static web dashboard for visualizing ThreatMetrix (TMX) event analytics for Square. The dashboard displays event data across four categories: Account Creation, Login, Payment, and Other transactions.
 
+## 🌐 Live Dashboard
+
+**https://blockcell.sqprod.co/sites/square-tmx-dashboard/**
+
 ## 🎯 Purpose
 
 This dashboard was created to track and analyze TMX event data for Square's integration with ThreatMetrix. Key features include:
@@ -11,11 +15,6 @@ This dashboard was created to track and analyze TMX event data for Square's inte
 - **Event type filtering** - Toggle visibility of Account Creation, Login, Payment, and Other events
 - **Flexible aggregation** - View data by Day, Week, or Month
 - **TMX Agreement Progress Tracker** - Tracks cumulative events since April 1, 2025 toward the 100M event target (excluding "Other" events), with estimated completion date
-
-## 🌐 Live Dashboard
-
-The dashboard is hosted on Blockcell:
-**https://blockcell.sqprod.co/sites/square-tmx-dashboard/**
 
 ## 📁 Project Structure
 

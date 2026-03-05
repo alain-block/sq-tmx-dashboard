@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Square TMX Dashboard - 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f4f8; min-height: 100vh; padding: 24px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        
+        header { margin-bottom: 24px; }
+        header h1 { font-size: 28px; color: #1e293b; margin-bottom: 8px; }
+        header p { color: #64748b; font-size: 14px; }
+        
+        .controls { display: flex; gap: 24px; align-items: center; margin-bottom: 24px; flex-wrap: wrap; }
+        .control-group { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .control-group h3 { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+        
+        .year-nav { display: flex; gap: 8px; align-items: center; }
+        .year-link { padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; color: #64748b; background: #f1f5f9; transition: all 0.2s; }
+        .year-link:hover { background: #e2e8f0; color: #1e293b; }
+        .year-link.active { background: #3b82f6; color: white; }
+        
+        .toggle-group { display: flex; gap: 0; }
+        .toggle-btn { 
+            padding: 8px 16px; border: 1px solid #cbd5e1; background: white; font-size: 13px; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .toggle-btn:first-child { border-radius: 6px 0 0 6px; }
+        .toggle-btn:last-child { border-radius: 0 6px 6px 0; }
+        .toggle-btn:not(:first-child) { border-left: none; }
+        .toggle-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+        .toggle-btn:hover:not(.active) { background: #f1f5f9; }
+        
+        .checkbox-group { display: flex; gap: 16px; flex-wrap: wrap; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #475569; }
+        .checkbox-label input { display: none; }
+        .checkbox-box { width: 16px; height: 16px; border-radius: 4px; border: 2px solid #cbd5e1; transition: all 0.2s; }
+        .checkbox-box.blue { border-color: #3b82f6; background: #3b82f6; }
+        .checkbox-box.green { border-color: #10b981; background: #10b981; }
+        .checkbox-box.purple { border-color: #8b5cf6; background: #8b5cf6; }
+        .checkbox-box.orange { border-color: #f59e0b; background: #f59e0b; }
+        .checkbox-label input:not(:checked) + .checkbox-box { background: white; }
+        
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .summary-card { display: flex; align-items: center; gap: 14px; }
+        .card-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .card-icon.blue { background: #dbeafe; }
+        .card-icon.green { background: #d1fae5; }
+        .card-icon.purple { background: #ede9fe; }
+        .card-icon.orange { background: #fef3c7; }
+        .card-content h3 { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .card-content .value { font-size: 24px; font-weight: 700; color: #1e293b; }
+        
+        .chart-section { margin-bottom: 24px; }
+        .card-header { margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .card-title { font-size: 16px; font-weight: 600; color: #1e293b; }
+        .chart-container { position: relative; height: 350px; }
+        .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+        @media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
+        .chart-container-small { position: relative; height: 280px; }
+        
+        .last-updated { font-size: 12px; color: #94a3b8; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Square TMX Dashboard - Usage By Event Type</h1>
+            <p id="dateRangeText">Event analytics for 2026</p>
+        </header>
+        <div class="last-updated">Data last updated: March 04, 2026</div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h3>Year</h3>
+                <div class="year-nav"><span class="year-link active">2026</span> <a href="dashboard_2025.html" class="year-link" data-year="2025">2025</a> <a href="dashboard_2024.html" class="year-link" data-year="2024">2024</a></div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Aggregation</h3>
+                <div class="toggle-group">
+                    <button class="toggle-btn" data-agg="day" onclick="setAggregation('day')">Day</button>
+                    <button class="toggle-btn active" data-agg="week" onclick="setAggregation('week')">Week</button>
+                    <button class="toggle-btn" data-agg="month" onclick="setAggregation('month')">Month</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <h3>Event Types</h3>
+                <div class="checkbox-group">
+                    <label class="checkbox-label"><input type="checkbox" checked onchange="toggleEventType('account_creation')" data-event="account_creation"><span class="checkbox-box blue"></span>Account Creation</label>
+                    <label class="checkbox-label"><input type="checkbox" checked onchange="toggleEventType('login')" data-event="login"><span class="checkbox-box green"></span>Login</label>
+                    <label class="checkbox-label"><input type="checkbox" checked onchange="toggleEventType('payment')" data-event="payment"><span class="checkbox-box purple"></span>Payment</label>
+                    <label class="checkbox-label"><input type="checkbox" checked onchange="toggleEventType('other')" data-event="other"><span class="checkbox-box orange"></span>Other</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-cards">
+            <div class="card summary-card">
+                <div class="card-icon blue">👤</div>
+                <div class="card-content"><h3>Account Creations</h3><div class="value" id="totalAccountCreation">-</div></div>
+            </div>
+            <div class="card summary-card">
+                <div class="card-icon green">🔑</div>
+                <div class="card-content"><h3>Logins</h3><div class="value" id="totalLogin">-</div></div>
+            </div>
+            <div class="card summary-card">
+                <div class="card-icon purple">💳</div>
+                <div class="card-content"><h3>Payments</h3><div class="value" id="totalPayment">-</div></div>
+            </div>
+            <div class="card summary-card">
+                <div class="card-icon orange">🔄</div>
+                <div class="card-content"><h3>Other</h3><div class="value" id="totalOther">-</div></div>
+            </div>
+        </div>
+        
+        <div class="card tmx-progress-card" style="margin-bottom: 24px;">
+            <div class="card-header" style="margin-bottom: 12px;">
+                <h2 class="card-title">📊 TMX Agreement Progress (Since Apr 1, 2025)</h2>
+                <a href="https://docs.google.com/document/d/1z74-3KJhNEOadiCZmX2S5g0zMWfSfvz6MwNYfW0eOXg/edit?tab=t.0" target="_blank" style="font-size: 12px; color: #3b82f6; text-decoration: none;">View Agreement →</a>
+            </div>
+            <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 300px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 14px; color: #475569;">Progress to 100M events</span>
+                        <span id="tmxPercentage" style="font-size: 14px; font-weight: 600; color: #3b82f6;">-</span>
+                    </div>
+                    <div style="background: #e2e8f0; border-radius: 8px; height: 24px; overflow: hidden;">
+                        <div id="tmxProgressBar" style="background: linear-gradient(90deg, #3b82f6, #8b5cf6); height: 100%; border-radius: 8px; transition: width 0.5s ease; width: 0%;"></div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Total Events</div>
+                        <div id="tmxTotalEvents" style="font-size: 20px; font-weight: 700; color: #1e293b;">-</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Remaining</div>
+                        <div id="tmxRemaining" style="font-size: 20px; font-weight: 700; color: #64748b;">-</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Est. Completion</div>
+                        <div id="tmxEstCompletion" style="font-size: 20px; font-weight: 700; color: #10b981;">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Event Trends Over Time</h2>
+                    <span id="chartAggLabel" style="font-size:12px;color:#64748b;">Weekly</span>
+                </div>
+                <div class="chart-container"><canvas id="lineChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="charts-row">
+            <div class="card">
+                <div class="card-header"><h2 class="card-title">Event Distribution</h2></div>
+                <div class="chart-container-small"><canvas id="donutChart"></canvas></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h2 class="card-title">Monthly Totals</h2></div>
+                <div class="chart-container-small"><canvas id="barChart"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const rawData = [{"date": "2026-01-01", "account_creation": 1719, "login": 222922, "payment": 327488, "other": 9}, {"date": "2026-01-02", "account_creation": 2645, "login": 406296, "payment": 473787, "other": 21}, {"date": "2026-01-03", "account_creation": 2418, "login": 284187, "payment": 443168, "other": 16}, {"date": "2026-01-04", "account_creation": 2053, "login": 251855, "payment": 382485, "other": 11}, {"date": "2026-01-05", "account_creation": 2980, "login": 511009, "payment": 465792, "other": 23}, {"date": "2026-01-06", "account_creation": 3214, "login": 505050, "payment": 500890, "other": 30}, {"date": "2026-01-07", "account_creation": 3087, "login": 496313, "payment": 520964, "other": 19}, {"date": "2026-01-08", "account_creation": 3137, "login": 485960, "payment": 558611, "other": 28}, {"date": "2026-01-09", "account_creation": 2780, "login": 462047, "payment": 616951, "other": 23}, {"date": "2026-01-10", "account_creation": 2300, "login": 283418, "payment": 509686, "other": 19}, {"date": "2026-01-11", "account_creation": 2052, "login": 237351, "payment": 412939, "other": 12}, {"date": "2026-01-12", "account_creation": 2971, "login": 484633, "payment": 481490, "other": 25}, {"date": "2026-01-13", "account_creation": 3186, "login": 495300, "payment": 520771, "other": 24}, {"date": "2026-01-14", "account_creation": 3115, "login": 500232, "payment": 546457, "other": 26}, {"date": "2026-01-15", "account_creation": 3292, "login": 501622, "payment": 591114, "other": 31}, {"date": "2026-01-16", "account_creation": 3088, "login": 469704, "payment": 633600, "other": 34}, {"date": "2026-01-17", "account_creation": 2394, "login": 285828, "payment": 515440, "other": 12}, {"date": "2026-01-18", "account_creation": 2011, "login": 238846, "payment": 408868, "other": 7}, {"date": "2026-01-19", "account_creation": 2859, "login": 443257, "payment": 434803, "other": 17}, {"date": "2026-01-20", "account_creation": 3133, "login": 511800, "payment": 496166, "other": 23}, {"date": "2026-01-21", "account_creation": 3164, "login": 519217, "payment": 515960, "other": 27}, {"date": "2026-01-22", "account_creation": 3056, "login": 504745, "payment": 541870, "other": 28}, {"date": "2026-01-23", "account_creation": 2913, "login": 481814, "payment": 584337, "other": 39}, {"date": "2026-01-24", "account_creation": 2253, "login": 287818, "payment": 452751, "other": 23}, {"date": "2026-01-25", "account_creation": 2007, "login": 230040, "payment": 318040, "other": 17}, {"date": "2026-01-26", "account_creation": 2810, "login": 465706, "payment": 375942, "other": 33}, {"date": "2026-01-27", "account_creation": 3108, "login": 494642, "payment": 466894, "other": 24}, {"date": "2026-01-28", "account_creation": 3221, "login": 497568, "payment": 520733, "other": 9765}, {"date": "2026-01-29", "account_creation": 3037, "login": 501521, "payment": 564923, "other": 2074}, {"date": "2026-01-30", "account_creation": 2920, "login": 480089, "payment": 634666, "other": 34}, {"date": "2026-01-31", "account_creation": 2325, "login": 308727, "payment": 524637, "other": 18}, {"date": "2026-02-01", "account_creation": 2133, "login": 296183, "payment": 466091, "other": 24}, {"date": "2026-02-02", "account_creation": 3024, "login": 567548, "payment": 527468, "other": 35}, {"date": "2026-02-03", "account_creation": 3006, "login": 535234, "payment": 562800, "other": 38}, {"date": "2026-02-04", "account_creation": 3113, "login": 535689, "payment": 584725, "other": 28}, {"date": "2026-02-05", "account_creation": 3154, "login": 519328, "payment": 619255, "other": 40}, {"date": "2026-02-06", "account_creation": 3005, "login": 483875, "payment": 673719, "other": 29}, {"date": "2026-02-07", "account_creation": 2564, "login": 300526, "payment": 555344, "other": 19}, {"date": "2026-02-08", "account_creation": 2066, "login": 251938, "payment": 442917, "other": 13}, {"date": "2026-02-09", "account_creation": 2934, "login": 496165, "payment": 473059, "other": 25}, {"date": "2026-02-10", "account_creation": 3267, "login": 506183, "payment": 548960, "other": 34}, {"date": "2026-02-11", "account_creation": 3223, "login": 500344, "payment": 584215, "other": 33}, {"date": "2026-02-12", "account_creation": 3070, "login": 502261, "payment": 608358, "other": 36}, {"date": "2026-02-13", "account_creation": 2652, "login": 468813, "payment": 673637, "other": 20}, {"date": "2026-02-14", "account_creation": 2078, "login": 284911, "payment": 560205, "other": 21}, {"date": "2026-02-15", "account_creation": 1849, "login": 248039, "payment": 432015, "other": 17}, {"date": "2026-02-16", "account_creation": 2482, "login": 452964, "payment": 449991, "other": 23}, {"date": "2026-02-17", "account_creation": 9473, "login": 504887, "payment": 502803, "other": 36}, {"date": "2026-02-18", "account_creation": 13219, "login": 495567, "payment": 546898, "other": 30}, {"date": "2026-02-19", "account_creation": 14449, "login": 496012, "payment": 573465, "other": 35}, {"date": "2026-02-20", "account_creation": 13197, "login": 479938, "payment": 648946, "other": 31}, {"date": "2026-02-21", "account_creation": 4814, "login": 298618, "payment": 533428, "other": 25}, {"date": "2026-02-22", "account_creation": 2875, "login": 249505, "payment": 420252, "other": 17}, {"date": "2026-02-23", "account_creation": 3517, "login": 473373, "payment": 447346, "other": 31}, {"date": "2026-02-24", "account_creation": 3607, "login": 496831, "payment": 526081, "other": 43}, {"date": "2026-02-25", "account_creation": 2808, "login": 497132, "payment": 579113, "other": 46}, {"date": "2026-02-26", "account_creation": 3006, "login": 497122, "payment": 609453, "other": 44}, {"date": "2026-02-27", "account_creation": 2824, "login": 475744, "payment": 689740, "other": 43}, {"date": "2026-02-28", "account_creation": 2304, "login": 305969, "payment": 580938, "other": 24}];
+        const allData = [{"date": "2024-06-15", "account_creation": 3172, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-16", "account_creation": 2309, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-17", "account_creation": 3689, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-18", "account_creation": 4311, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-19", "account_creation": 4368, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-20", "account_creation": 4145, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-21", "account_creation": 4069, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-22", "account_creation": 3390, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-23", "account_creation": 3032, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-24", "account_creation": 4078, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-25", "account_creation": 4375, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-26", "account_creation": 4544, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-27", "account_creation": 4224, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-28", "account_creation": 4179, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-29", "account_creation": 3404, "login": 0, "payment": 0, "other": 0}, {"date": "2024-06-30", "account_creation": 2909, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-01", "account_creation": 3986, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-02", "account_creation": 4129, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-03", "account_creation": 4135, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-04", "account_creation": 3172, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-05", "account_creation": 3462, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-06", "account_creation": 3309, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-07", "account_creation": 2851, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-08", "account_creation": 4002, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-09", "account_creation": 4095, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-10", "account_creation": 3918, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-11", "account_creation": 3581, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-12", "account_creation": 3501, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-13", "account_creation": 2781, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-14", "account_creation": 2462, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-15", "account_creation": 3398, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-16", "account_creation": 3268, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-17", "account_creation": 3233, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-18", "account_creation": 3120, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-19", "account_creation": 2856, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-20", "account_creation": 2222, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-21", "account_creation": 1832, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-22", "account_creation": 2859, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-23", "account_creation": 3164, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-24", "account_creation": 3360, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-25", "account_creation": 3223, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-26", "account_creation": 2990, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-27", "account_creation": 2368, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-28", "account_creation": 2093, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-29", "account_creation": 2997, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-30", "account_creation": 3158, "login": 0, "payment": 0, "other": 0}, {"date": "2024-07-31", "account_creation": 3587, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-01", "account_creation": 3507, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-02", "account_creation": 3226, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-03", "account_creation": 2605, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-04", "account_creation": 2196, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-05", "account_creation": 3075, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-06", "account_creation": 3370, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-07", "account_creation": 3176, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-08", "account_creation": 3391, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-09", "account_creation": 3242, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-10", "account_creation": 2612, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-11", "account_creation": 2299, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-12", "account_creation": 3229, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-13", "account_creation": 3604, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-14", "account_creation": 3410, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-15", "account_creation": 3347, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-16", "account_creation": 3090, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-17", "account_creation": 2603, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-18", "account_creation": 2327, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-19", "account_creation": 3285, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-20", "account_creation": 3305, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-21", "account_creation": 3207, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-22", "account_creation": 3312, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-23", "account_creation": 3167, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-24", "account_creation": 2666, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-25", "account_creation": 2401, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-26", "account_creation": 3364, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-27", "account_creation": 3917, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-28", "account_creation": 3933, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-29", "account_creation": 3731, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-30", "account_creation": 3281, "login": 0, "payment": 0, "other": 0}, {"date": "2024-08-31", "account_creation": 2830, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-01", "account_creation": 2492, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-02", "account_creation": 3162, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-03", "account_creation": 3655, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-04", "account_creation": 4173, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-05", "account_creation": 4023, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-06", "account_creation": 4072, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-07", "account_creation": 3891, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-08", "account_creation": 3912, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-09", "account_creation": 5855, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-10", "account_creation": 4331, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-11", "account_creation": 3653, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-12", "account_creation": 3749, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-13", "account_creation": 3467, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-14", "account_creation": 2980, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-15", "account_creation": 2607, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-16", "account_creation": 3803, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-17", "account_creation": 4074, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-18", "account_creation": 4451, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-19", "account_creation": 4639, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-20", "account_creation": 4202, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-21", "account_creation": 3627, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-22", "account_creation": 3306, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-23", "account_creation": 4446, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-24", "account_creation": 5001, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-25", "account_creation": 4810, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-26", "account_creation": 4305, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-27", "account_creation": 3175, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-28", "account_creation": 3037, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-29", "account_creation": 2888, "login": 0, "payment": 0, "other": 0}, {"date": "2024-09-30", "account_creation": 3653, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-01", "account_creation": 3984, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-02", "account_creation": 4227, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-03", "account_creation": 3591, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-04", "account_creation": 3203, "login": 0, "payment": 1, "other": 0}, {"date": "2024-10-05", "account_creation": 2457, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-06", "account_creation": 1970, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-07", "account_creation": 2992, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-08", "account_creation": 3228, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-09", "account_creation": 3441, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-10", "account_creation": 3317, "login": 0, "payment": 2, "other": 0}, {"date": "2024-10-11", "account_creation": 3340, "login": 0, "payment": 3, "other": 0}, {"date": "2024-10-12", "account_creation": 2562, "login": 0, "payment": 4174, "other": 0}, {"date": "2024-10-13", "account_creation": 2162, "login": 0, "payment": 25480, "other": 0}, {"date": "2024-10-14", "account_creation": 3026, "login": 0, "payment": 128373, "other": 0}, {"date": "2024-10-15", "account_creation": 3533, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-16", "account_creation": 3704, "login": 0, "payment": 99999, "other": 0}, {"date": "2024-10-17", "account_creation": 3647, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-18", "account_creation": 3517, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-19", "account_creation": 2728, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-20", "account_creation": 2523, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-21", "account_creation": 3496, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-22", "account_creation": 3575, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-23", "account_creation": 3435, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-24", "account_creation": 3557, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-25", "account_creation": 3379, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-26", "account_creation": 2925, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-27", "account_creation": 2702, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-28", "account_creation": 3299, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-29", "account_creation": 3578, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-30", "account_creation": 3683, "login": 0, "payment": 0, "other": 0}, {"date": "2024-10-31", "account_creation": 3281, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-01", "account_creation": 3472, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-02", "account_creation": 3347, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-03", "account_creation": 3556, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-04", "account_creation": 5009, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-05", "account_creation": 4938, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-06", "account_creation": 4587, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-07", "account_creation": 4655, "login": 0, "payment": 1, "other": 0}, {"date": "2024-11-08", "account_creation": 4044, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-09", "account_creation": 4022, "login": 0, "payment": 8, "other": 0}, {"date": "2024-11-10", "account_creation": 3376, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-11", "account_creation": 4686, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-12", "account_creation": 4494, "login": 0, "payment": 4, "other": 0}, {"date": "2024-11-13", "account_creation": 4756, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-14", "account_creation": 5044, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-15", "account_creation": 4233, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-16", "account_creation": 3850, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-17", "account_creation": 3918, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-18", "account_creation": 4822, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-19", "account_creation": 5406, "login": 0, "payment": 2, "other": 0}, {"date": "2024-11-20", "account_creation": 5094, "login": 0, "payment": 10, "other": 0}, {"date": "2024-11-21", "account_creation": 4653, "login": 0, "payment": 1, "other": 0}, {"date": "2024-11-22", "account_creation": 3987, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-23", "account_creation": 3794, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-24", "account_creation": 3598, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-25", "account_creation": 4909, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-26", "account_creation": 3620, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-27", "account_creation": 2776, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-28", "account_creation": 1615, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-29", "account_creation": 2131, "login": 0, "payment": 0, "other": 0}, {"date": "2024-11-30", "account_creation": 2332, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-01", "account_creation": 2212, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-02", "account_creation": 3089, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-03", "account_creation": 3346, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-04", "account_creation": 3312, "login": 0, "payment": 10, "other": 0}, {"date": "2024-12-05", "account_creation": 3288, "login": 0, "payment": 164, "other": 0}, {"date": "2024-12-06", "account_creation": 3089, "login": 0, "payment": 309, "other": 0}, {"date": "2024-12-07", "account_creation": 2719, "login": 0, "payment": 183, "other": 0}, {"date": "2024-12-08", "account_creation": 1989, "login": 0, "payment": 250, "other": 0}, {"date": "2024-12-09", "account_creation": 2721, "login": 0, "payment": 411, "other": 0}, {"date": "2024-12-10", "account_creation": 2818, "login": 0, "payment": 525, "other": 0}, {"date": "2024-12-11", "account_creation": 2729, "login": 0, "payment": 462, "other": 0}, {"date": "2024-12-12", "account_creation": 2773, "login": 0, "payment": 223, "other": 0}, {"date": "2024-12-13", "account_creation": 2669, "login": 0, "payment": 148, "other": 0}, {"date": "2024-12-14", "account_creation": 2242, "login": 0, "payment": 3, "other": 0}, {"date": "2024-12-15", "account_creation": 1778, "login": 0, "payment": 1, "other": 0}, {"date": "2024-12-16", "account_creation": 2362, "login": 0, "payment": 238, "other": 0}, {"date": "2024-12-17", "account_creation": 2727, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-18", "account_creation": 2744, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-19", "account_creation": 2610, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-20", "account_creation": 2468, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-21", "account_creation": 1859, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-22", "account_creation": 1504, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-23", "account_creation": 2068, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-24", "account_creation": 1544, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-25", "account_creation": 1108, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-26", "account_creation": 1867, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-27", "account_creation": 2240, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-28", "account_creation": 1919, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-29", "account_creation": 1873, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-30", "account_creation": 2446, "login": 0, "payment": 0, "other": 0}, {"date": "2024-12-31", "account_creation": 2426, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-01", "account_creation": 1783, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-02", "account_creation": 2807, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-03", "account_creation": 2879, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-04", "account_creation": 2252, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-05", "account_creation": 1955, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-06", "account_creation": 2917, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-07", "account_creation": 3075, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-08", "account_creation": 3187, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-09", "account_creation": 3155, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-10", "account_creation": 2852, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-11", "account_creation": 2351, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-12", "account_creation": 2105, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-13", "account_creation": 3078, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-14", "account_creation": 3313, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-15", "account_creation": 3257, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-16", "account_creation": 3192, "login": 0, "payment": 6847, "other": 0}, {"date": "2025-01-17", "account_creation": 3001, "login": 0, "payment": 24777, "other": 0}, {"date": "2025-01-18", "account_creation": 2354, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-19", "account_creation": 2434, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-20", "account_creation": 2576, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-21", "account_creation": 2881, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-22", "account_creation": 3199, "login": 0, "payment": 1, "other": 0}, {"date": "2025-01-23", "account_creation": 3187, "login": 0, "payment": 63, "other": 0}, {"date": "2025-01-24", "account_creation": 3177, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-25", "account_creation": 2308, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-26", "account_creation": 2362, "login": 0, "payment": 0, "other": 0}, {"date": "2025-01-27", "account_creation": 2817, "login": 0, "payment": 3720, "other": 0}, {"date": "2025-01-28", "account_creation": 2899, "login": 0, "payment": 21897, "other": 0}, {"date": "2025-01-29", "account_creation": 3112, "login": 0, "payment": 123912, "other": 0}, {"date": "2025-01-30", "account_creation": 2993, "login": 0, "payment": 171901, "other": 0}, {"date": "2025-01-31", "account_creation": 2852, "login": 0, "payment": 196571, "other": 0}, {"date": "2025-02-01", "account_creation": 2357, "login": 0, "payment": 168184, "other": 0}, {"date": "2025-02-02", "account_creation": 2103, "login": 0, "payment": 131697, "other": 0}, {"date": "2025-02-03", "account_creation": 2982, "login": 0, "payment": 151239, "other": 0}, {"date": "2025-02-04", "account_creation": 3143, "login": 0, "payment": 170124, "other": 0}, {"date": "2025-02-05", "account_creation": 3251, "login": 0, "payment": 191914, "other": 0}, {"date": "2025-02-06", "account_creation": 3211, "login": 0, "payment": 201183, "other": 0}, {"date": "2025-02-07", "account_creation": 3021, "login": 0, "payment": 231601, "other": 0}, {"date": "2025-02-08", "account_creation": 2400, "login": 0, "payment": 199006, "other": 0}, {"date": "2025-02-09", "account_creation": 2119, "login": 0, "payment": 154569, "other": 0}, {"date": "2025-02-10", "account_creation": 2869, "login": 0, "payment": 160461, "other": 0}, {"date": "2025-02-11", "account_creation": 3270, "login": 0, "payment": 179762, "other": 0}, {"date": "2025-02-12", "account_creation": 3350, "login": 0, "payment": 191401, "other": 0}, {"date": "2025-02-13", "account_creation": 3130, "login": 0, "payment": 202401, "other": 0}, {"date": "2025-02-14", "account_creation": 2868, "login": 0, "payment": 230632, "other": 0}, {"date": "2025-02-15", "account_creation": 2223, "login": 0, "payment": 185601, "other": 0}, {"date": "2025-02-16", "account_creation": 2442, "login": 0, "payment": 144635, "other": 0}, {"date": "2025-02-17", "account_creation": 3109, "login": 0, "payment": 548508, "other": 0}, {"date": "2025-02-18", "account_creation": 3488, "login": 0, "payment": 162002, "other": 0}, {"date": "2025-02-19", "account_creation": 3587, "login": 0, "payment": 175207, "other": 0}, {"date": "2025-02-20", "account_creation": 3303, "login": 0, "payment": 192226, "other": 0}, {"date": "2025-02-21", "account_creation": 3287, "login": 0, "payment": 222335, "other": 0}, {"date": "2025-02-22", "account_creation": 2958, "login": 0, "payment": 198269, "other": 0}, {"date": "2025-02-23", "account_creation": 2730, "login": 0, "payment": 155462, "other": 0}, {"date": "2025-02-24", "account_creation": 3205, "login": 0, "payment": 166383, "other": 0}, {"date": "2025-02-25", "account_creation": 3431, "login": 0, "payment": 182912, "other": 0}, {"date": "2025-02-26", "account_creation": 3182, "login": 0, "payment": 196290, "other": 0}, {"date": "2025-02-27", "account_creation": 3249, "login": 0, "payment": 211702, "other": 0}, {"date": "2025-02-28", "account_creation": 3242, "login": 0, "payment": 367032, "other": 0}, {"date": "2025-03-01", "account_creation": 2648, "login": 0, "payment": 380969, "other": 0}, {"date": "2025-03-02", "account_creation": 2256, "login": 0, "payment": 296199, "other": 0}, {"date": "2025-03-03", "account_creation": 3276, "login": 0, "payment": 321080, "other": 0}, {"date": "2025-03-04", "account_creation": 3383, "login": 0, "payment": 347381, "other": 0}, {"date": "2025-03-05", "account_creation": 3350, "login": 0, "payment": 355070, "other": 0}, {"date": "2025-03-06", "account_creation": 3308, "login": 0, "payment": 382886, "other": 0}, {"date": "2025-03-07", "account_creation": 3268, "login": 0, "payment": 441082, "other": 0}, {"date": "2025-03-08", "account_creation": 2646, "login": 0, "payment": 365354, "other": 0}, {"date": "2025-03-09", "account_creation": 2225, "login": 0, "payment": 289590, "other": 0}, {"date": "2025-03-10", "account_creation": 3162, "login": 0, "payment": 307237, "other": 0}, {"date": "2025-03-11", "account_creation": 3296, "login": 0, "payment": 338119, "other": 0}, {"date": "2025-03-12", "account_creation": 3390, "login": 0, "payment": 358084, "other": 0}, {"date": "2025-03-13", "account_creation": 3261, "login": 0, "payment": 382539, "other": 0}, {"date": "2025-03-14", "account_creation": 3229, "login": 0, "payment": 438731, "other": 0}, {"date": "2025-03-15", "account_creation": 2456, "login": 0, "payment": 357955, "other": 0}, {"date": "2025-03-16", "account_creation": 2302, "login": 0, "payment": 285034, "other": 0}, {"date": "2025-03-17", "account_creation": 3080, "login": 0, "payment": 307485, "other": 0}, {"date": "2025-03-18", "account_creation": 3266, "login": 0, "payment": 339982, "other": 0}, {"date": "2025-03-19", "account_creation": 3398, "login": 0, "payment": 366453, "other": 0}, {"date": "2025-03-20", "account_creation": 3152, "login": 0, "payment": 379753, "other": 0}, {"date": "2025-03-21", "account_creation": 3236, "login": 0, "payment": 443399, "other": 0}, {"date": "2025-03-22", "account_creation": 2520, "login": 0, "payment": 362087, "other": 0}, {"date": "2025-03-23", "account_creation": 2260, "login": 0, "payment": 287954, "other": 0}, {"date": "2025-03-24", "account_creation": 3156, "login": 0, "payment": 304166, "other": 0}, {"date": "2025-03-25", "account_creation": 3355, "login": 0, "payment": 342809, "other": 0}, {"date": "2025-03-26", "account_creation": 3216, "login": 0, "payment": 369710, "other": 0}, {"date": "2025-03-27", "account_creation": 3340, "login": 0, "payment": 370442, "other": 10}, {"date": "2025-03-28", "account_creation": 3143, "login": 0, "payment": 420628, "other": 0}, {"date": "2025-03-29", "account_creation": 2641, "login": 0, "payment": 350228, "other": 0}, {"date": "2025-03-30", "account_creation": 2284, "login": 0, "payment": 280496, "other": 0}, {"date": "2025-03-31", "account_creation": 3429, "login": 0, "payment": 313145, "other": 0}, {"date": "2025-04-01", "account_creation": 3614, "login": 0, "payment": 356511, "other": 0}, {"date": "2025-04-02", "account_creation": 3586, "login": 0, "payment": 363324, "other": 0}, {"date": "2025-04-03", "account_creation": 3536, "login": 0, "payment": 386103, "other": 0}, {"date": "2025-04-04", "account_creation": 3550, "login": 0, "payment": 423620, "other": 0}, {"date": "2025-04-05", "account_creation": 2727, "login": 0, "payment": 351757, "other": 0}, {"date": "2025-04-06", "account_creation": 2416, "login": 0, "payment": 281346, "other": 0}, {"date": "2025-04-07", "account_creation": 3313, "login": 0, "payment": 309995, "other": 0}, {"date": "2025-04-08", "account_creation": 3611, "login": 11, "payment": 341232, "other": 0}, {"date": "2025-04-09", "account_creation": 3483, "login": 2, "payment": 358107, "other": 0}, {"date": "2025-04-10", "account_creation": 3630, "login": 0, "payment": 378551, "other": 0}, {"date": "2025-04-11", "account_creation": 3447, "login": 0, "payment": 428817, "other": 0}, {"date": "2025-04-12", "account_creation": 3064, "login": 0, "payment": 345765, "other": 0}, {"date": "2025-04-13", "account_creation": 2896, "login": 0, "payment": 274963, "other": 0}, {"date": "2025-04-14", "account_creation": 3387, "login": 0, "payment": 313139, "other": 0}, {"date": "2025-04-15", "account_creation": 3639, "login": 0, "payment": 351405, "other": 0}, {"date": "2025-04-16", "account_creation": 3720, "login": 0, "payment": 367984, "other": 0}, {"date": "2025-04-17", "account_creation": 3572, "login": 0, "payment": 369597, "other": 0}, {"date": "2025-04-18", "account_creation": 3208, "login": 0, "payment": 374032, "other": 0}, {"date": "2025-04-19", "account_creation": 2538, "login": 0, "payment": 315927, "other": 0}, {"date": "2025-04-20", "account_creation": 1882, "login": 0, "payment": 189814, "other": 0}, {"date": "2025-04-21", "account_creation": 3195, "login": 0, "payment": 281529, "other": 0}, {"date": "2025-04-22", "account_creation": 3696, "login": 0, "payment": 330150, "other": 0}, {"date": "2025-04-23", "account_creation": 3871, "login": 0, "payment": 348821, "other": 0}, {"date": "2025-04-24", "account_creation": 3689, "login": 0, "payment": 367900, "other": 0}, {"date": "2025-04-25", "account_creation": 3613, "login": 0, "payment": 402025, "other": 0}, {"date": "2025-04-26", "account_creation": 2773, "login": 0, "payment": 333735, "other": 0}, {"date": "2025-04-27", "account_creation": 2508, "login": 0, "payment": 262065, "other": 0}, {"date": "2025-04-28", "account_creation": 3428, "login": 0, "payment": 302998, "other": 0}, {"date": "2025-04-29", "account_creation": 3967, "login": 0, "payment": 336816, "other": 0}, {"date": "2025-04-30", "account_creation": 3877, "login": 0, "payment": 374475, "other": 0}, {"date": "2025-05-01", "account_creation": 3787, "login": 0, "payment": 423289, "other": 0}, {"date": "2025-05-02", "account_creation": 3845, "login": 0, "payment": 491258, "other": 1}, {"date": "2025-05-03", "account_creation": 2980, "login": 0, "payment": 412949, "other": 0}, {"date": "2025-05-04", "account_creation": 2698, "login": 0, "payment": 329190, "other": 0}, {"date": "2025-05-05", "account_creation": 3642, "login": 0, "payment": 370237, "other": 1}, {"date": "2025-05-06", "account_creation": 4087, "login": 0, "payment": 393142, "other": 0}, {"date": "2025-05-07", "account_creation": 3751, "login": 0, "payment": 423779, "other": 0}, {"date": "2025-05-08", "account_creation": 3741, "login": 0, "payment": 435642, "other": 0}, {"date": "2025-05-09", "account_creation": 3536, "login": 0, "payment": 474595, "other": 0}, {"date": "2025-05-10", "account_creation": 2635, "login": 0, "payment": 407311, "other": 0}, {"date": "2025-05-11", "account_creation": 1948, "login": 0, "payment": 326827, "other": 0}, {"date": "2025-05-12", "account_creation": 3255, "login": 0, "payment": 333391, "other": 1}, {"date": "2025-05-13", "account_creation": 3746, "login": 0, "payment": 378099, "other": 0}, {"date": "2025-05-14", "account_creation": 3848, "login": 0, "payment": 408488, "other": 0}, {"date": "2025-05-15", "account_creation": 3795, "login": 0, "payment": 431589, "other": 0}, {"date": "2025-05-16", "account_creation": 3475, "login": 0, "payment": 478807, "other": 0}, {"date": "2025-05-17", "account_creation": 2631, "login": 0, "payment": 391050, "other": 0}, {"date": "2025-05-18", "account_creation": 2316, "login": 0, "payment": 317235, "other": 0}, {"date": "2025-05-19", "account_creation": 3423, "login": 0, "payment": 342547, "other": 2}, {"date": "2025-05-20", "account_creation": 3601, "login": 0, "payment": 371467, "other": 15}, {"date": "2025-05-21", "account_creation": 3328, "login": 0, "payment": 400983, "other": 10}, {"date": "2025-05-22", "account_creation": 3480, "login": 0, "payment": 410353, "other": 14}, {"date": "2025-05-23", "account_creation": 3394, "login": 0, "payment": 443420, "other": 11}, {"date": "2025-05-24", "account_creation": 2477, "login": 0, "payment": 368529, "other": 5}, {"date": "2025-05-25", "account_creation": 2067, "login": 0, "payment": 293364, "other": 0}, {"date": "2025-05-26", "account_creation": 2543, "login": 0, "payment": 250623, "other": 2}, {"date": "2025-05-27", "account_creation": 3283, "login": 0, "payment": 339591, "other": 6}, {"date": "2025-05-28", "account_creation": 3562, "login": 0, "payment": 381499, "other": 11}, {"date": "2025-05-29", "account_creation": 3525, "login": 0, "payment": 407321, "other": 11}, {"date": "2025-05-30", "account_creation": 3371, "login": 0, "payment": 460136, "other": 10}, {"date": "2025-05-31", "account_creation": 2770, "login": 0, "payment": 394634, "other": 6}, {"date": "2025-06-01", "account_creation": 2303, "login": 0, "payment": 321843, "other": 2}, {"date": "2025-06-02", "account_creation": 3691, "login": 0, "payment": 341192, "other": 8}, {"date": "2025-06-03", "account_creation": 3632, "login": 0, "payment": 371813, "other": 16}, {"date": "2025-06-04", "account_creation": 3533, "login": 0, "payment": 388663, "other": 8}, {"date": "2025-06-05", "account_creation": 3467, "login": 0, "payment": 406326, "other": 8}, {"date": "2025-06-06", "account_creation": 3397, "login": 0, "payment": 450626, "other": 8}, {"date": "2025-06-07", "account_creation": 2646, "login": 0, "payment": 375853, "other": 3}, {"date": "2025-06-08", "account_creation": 2144, "login": 0, "payment": 308761, "other": 1}, {"date": "2025-06-09", "account_creation": 3305, "login": 0, "payment": 321494, "other": 12}, {"date": "2025-06-10", "account_creation": 3565, "login": 0, "payment": 352196, "other": 9}, {"date": "2025-06-11", "account_creation": 3695, "login": 0, "payment": 383015, "other": 10}, {"date": "2025-06-12", "account_creation": 3698, "login": 0, "payment": 404593, "other": 8}, {"date": "2025-06-13", "account_creation": 3329, "login": 0, "payment": 440532, "other": 18}, {"date": "2025-06-14", "account_creation": 2659, "login": 0, "payment": 371970, "other": 5}, {"date": "2025-06-15", "account_creation": 2173, "login": 0, "payment": 303067, "other": 2}, {"date": "2025-06-16", "account_creation": 3420, "login": 0, "payment": 313894, "other": 9}, {"date": "2025-06-17", "account_creation": 3566, "login": 0, "payment": 345421, "other": 10}, {"date": "2025-06-18", "account_creation": 3604, "login": 0, "payment": 375923, "other": 13}, {"date": "2025-06-19", "account_creation": 3592, "login": 0, "payment": 385236, "other": 10}, {"date": "2025-06-20", "account_creation": 3312, "login": 0, "payment": 412766, "other": 10}, {"date": "2025-06-21", "account_creation": 2638, "login": 0, "payment": 360464, "other": 8}, {"date": "2025-06-22", "account_creation": 2331, "login": 0, "payment": 290463, "other": 2}, {"date": "2025-06-23", "account_creation": 3177, "login": 0, "payment": 312494, "other": 5}, {"date": "2025-06-24", "account_creation": 3839, "login": 0, "payment": 352994, "other": 13}, {"date": "2025-06-25", "account_creation": 3617, "login": 0, "payment": 376032, "other": 12}, {"date": "2025-06-26", "account_creation": 3500, "login": 0, "payment": 392745, "other": 10}, {"date": "2025-06-27", "account_creation": 3264, "login": 0, "payment": 433105, "other": 6}, {"date": "2025-06-28", "account_creation": 2795, "login": 0, "payment": 373123, "other": 4}, {"date": "2025-06-29", "account_creation": 2385, "login": 0, "payment": 309025, "other": 2}, {"date": "2025-06-30", "account_creation": 3438, "login": 0, "payment": 338158, "other": 12}, {"date": "2025-07-01", "account_creation": 3502, "login": 0, "payment": 370882, "other": 13}, {"date": "2025-07-02", "account_creation": 3498, "login": 0, "payment": 380916, "other": 8}, {"date": "2025-07-03", "account_creation": 3133, "login": 0, "payment": 397287, "other": 10}, {"date": "2025-07-04", "account_creation": 2220, "login": 0, "payment": 254348, "other": 2}, {"date": "2025-07-05", "account_creation": 1839, "login": 0, "payment": 282106, "other": 1}, {"date": "2025-07-06", "account_creation": 2009, "login": 0, "payment": 280985, "other": 2}, {"date": "2025-07-07", "account_creation": 3294, "login": 0, "payment": 324548, "other": 15}, {"date": "2025-07-08", "account_creation": 3771, "login": 0, "payment": 350209, "other": 9}, {"date": "2025-07-09", "account_creation": 3368, "login": 0, "payment": 392836, "other": 12}, {"date": "2025-07-10", "account_creation": 3519, "login": 0, "payment": 447491, "other": 11}, {"date": "2025-07-11", "account_creation": 3121, "login": 0, "payment": 482818, "other": 11}, {"date": "2025-07-12", "account_creation": 2506, "login": 0, "payment": 385280, "other": 6}, {"date": "2025-07-13", "account_creation": 2212, "login": 0, "payment": 323068, "other": 2}, {"date": "2025-07-14", "account_creation": 3248, "login": 0, "payment": 384494, "other": 6}, {"date": "2025-07-15", "account_creation": 3398, "login": 0, "payment": 444427, "other": 11}, {"date": "2025-07-16", "account_creation": 3575, "login": 0, "payment": 477684, "other": 12}, {"date": "2025-07-17", "account_creation": 3438, "login": 0, "payment": 491330, "other": 13}, {"date": "2025-07-18", "account_creation": 3196, "login": 0, "payment": 526573, "other": 15}, {"date": "2025-07-19", "account_creation": 2427, "login": 0, "payment": 426796, "other": 2}, {"date": "2025-07-20", "account_creation": 2195, "login": 0, "payment": 345489, "other": 2}, {"date": "2025-07-21", "account_creation": 3253, "login": 0, "payment": 407401, "other": 11}, {"date": "2025-07-22", "account_creation": 3374, "login": 0, "payment": 446137, "other": 13}, {"date": "2025-07-23", "account_creation": 3420, "login": 0, "payment": 472383, "other": 11}, {"date": "2025-07-24", "account_creation": 3306, "login": 0, "payment": 485793, "other": 10}, {"date": "2025-07-25", "account_creation": 3096, "login": 0, "payment": 528204, "other": 11}, {"date": "2025-07-26", "account_creation": 2464, "login": 0, "payment": 422572, "other": 5}, {"date": "2025-07-27", "account_creation": 2287, "login": 0, "payment": 342614, "other": 2}, {"date": "2025-07-28", "account_creation": 3160, "login": 0, "payment": 418141, "other": 9}, {"date": "2025-07-29", "account_creation": 3577, "login": 0, "payment": 453504, "other": 16}, {"date": "2025-07-30", "account_creation": 3576, "login": 0, "payment": 488299, "other": 17}, {"date": "2025-07-31", "account_creation": 3451, "login": 0, "payment": 523834, "other": 7}, {"date": "2025-08-01", "account_creation": 3375, "login": 0, "payment": 586983, "other": 13}, {"date": "2025-08-02", "account_creation": 2716, "login": 0, "payment": 447430, "other": 6}, {"date": "2025-08-03", "account_creation": 2398, "login": 0, "payment": 364276, "other": 2}, {"date": "2025-08-04", "account_creation": 3365, "login": 0, "payment": 437863, "other": 10}, {"date": "2025-08-05", "account_creation": 3521, "login": 0, "payment": 470961, "other": 8}, {"date": "2025-08-06", "account_creation": 3575, "login": 0, "payment": 484627, "other": 12}, {"date": "2025-08-07", "account_creation": 3578, "login": 0, "payment": 511531, "other": 12}, {"date": "2025-08-08", "account_creation": 3248, "login": 0, "payment": 560040, "other": 7}, {"date": "2025-08-09", "account_creation": 2630, "login": 0, "payment": 450536, "other": 4}, {"date": "2025-08-10", "account_creation": 2403, "login": 0, "payment": 365109, "other": 5}, {"date": "2025-08-11", "account_creation": 3355, "login": 0, "payment": 442609, "other": 10}, {"date": "2025-08-12", "account_creation": 3608, "login": 0, "payment": 475137, "other": 7}, {"date": "2025-08-13", "account_creation": 3669, "login": 0, "payment": 498880, "other": 7}, {"date": "2025-08-14", "account_creation": 3434, "login": 0, "payment": 518967, "other": 12}, {"date": "2025-08-15", "account_creation": 3408, "login": 0, "payment": 580380, "other": 14}, {"date": "2025-08-16", "account_creation": 2657, "login": 0, "payment": 453710, "other": 3}, {"date": "2025-08-17", "account_creation": 2277, "login": 0, "payment": 378144, "other": 1}, {"date": "2025-08-18", "account_creation": 3228, "login": 0, "payment": 445981, "other": 10}, {"date": "2025-08-19", "account_creation": 3590, "login": 0, "payment": 481488, "other": 7}, {"date": "2025-08-20", "account_creation": 3566, "login": 0, "payment": 512167, "other": 8}, {"date": "2025-08-21", "account_creation": 3355, "login": 0, "payment": 536813, "other": 13}, {"date": "2025-08-22", "account_creation": 3379, "login": 0, "payment": 587208, "other": 9}, {"date": "2025-08-23", "account_creation": 2618, "login": 0, "payment": 471197, "other": 2}, {"date": "2025-08-24", "account_creation": 2285, "login": 0, "payment": 374799, "other": 0}, {"date": "2025-08-25", "account_creation": 3384, "login": 0, "payment": 459867, "other": 13}, {"date": "2025-08-26", "account_creation": 3441, "login": 0, "payment": 485555, "other": 9}, {"date": "2025-08-27", "account_creation": 3490, "login": 0, "payment": 507187, "other": 3}, {"date": "2025-08-28", "account_creation": 3423, "login": 1, "payment": 538524, "other": 9}, {"date": "2025-08-29", "account_creation": 3140, "login": 0, "payment": 583061, "other": 13}, {"date": "2025-08-30", "account_creation": 2526, "login": 0, "payment": 454158, "other": 2}, {"date": "2025-08-31", "account_creation": 2246, "login": 0, "payment": 372498, "other": 2}, {"date": "2025-09-01", "account_creation": 2540, "login": 0, "payment": 350253, "other": 4}, {"date": "2025-09-02", "account_creation": 3369, "login": 0, "payment": 502746, "other": 8}, {"date": "2025-09-03", "account_creation": 3715, "login": 0, "payment": 548800, "other": 8}, {"date": "2025-09-04", "account_creation": 3613, "login": 0, "payment": 584835, "other": 18}, {"date": "2025-09-05", "account_creation": 3625, "login": 0, "payment": 633519, "other": 3}, {"date": "2025-09-06", "account_creation": 2782, "login": 0, "payment": 499351, "other": 3}, {"date": "2025-09-07", "account_creation": 2387, "login": 0, "payment": 415124, "other": 1}, {"date": "2025-09-08", "account_creation": 3280, "login": 0, "payment": 521491, "other": 10}, {"date": "2025-09-09", "account_creation": 3474, "login": 0, "payment": 597747, "other": 11}, {"date": "2025-09-10", "account_creation": 3595, "login": 0, "payment": 567158, "other": 8}, {"date": "2025-09-11", "account_creation": 3248, "login": 158158, "payment": 589785, "other": 23}, {"date": "2025-09-12", "account_creation": 3059, "login": 409753, "payment": 662019, "other": 24}, {"date": "2025-09-13", "account_creation": 2683, "login": 271151, "payment": 539336, "other": 8}, {"date": "2025-09-14", "account_creation": 2175, "login": 231117, "payment": 469243, "other": 9}, {"date": "2025-09-15", "account_creation": 3221, "login": 493051, "payment": 529959, "other": 22}, {"date": "2025-09-16", "account_creation": 3612, "login": 497380, "payment": 542631, "other": 16}, {"date": "2025-09-17", "account_creation": 3462, "login": 492214, "payment": 558653, "other": 25}, {"date": "2025-09-18", "account_creation": 3346, "login": 484706, "payment": 581631, "other": 25}, {"date": "2025-09-19", "account_creation": 3204, "login": 457463, "payment": 656859, "other": 25}, {"date": "2025-09-20", "account_creation": 2571, "login": 277252, "payment": 558375, "other": 4}, {"date": "2025-09-21", "account_creation": 2201, "login": 235464, "payment": 424928, "other": 8}, {"date": "2025-09-22", "account_creation": 3207, "login": 496923, "payment": 496295, "other": 25}, {"date": "2025-09-23", "account_creation": 3433, "login": 483583, "payment": 531275, "other": 31}, {"date": "2025-09-24", "account_creation": 3599, "login": 484143, "payment": 557319, "other": 27}, {"date": "2025-09-25", "account_creation": 3508, "login": 487390, "payment": 593217, "other": 33}, {"date": "2025-09-26", "account_creation": 3414, "login": 457264, "payment": 673853, "other": 42}, {"date": "2025-09-27", "account_creation": 2682, "login": 277664, "payment": 543379, "other": 13}, {"date": "2025-09-28", "account_creation": 2314, "login": 238751, "payment": 418938, "other": 10}, {"date": "2025-09-29", "account_creation": 3629, "login": 507725, "payment": 522811, "other": 33}, {"date": "2025-09-30", "account_creation": 3550, "login": 521590, "payment": 571811, "other": 42}, {"date": "2025-10-01", "account_creation": 3836, "login": 569161, "payment": 661788, "other": 28}, {"date": "2025-10-02", "account_creation": 3716, "login": 534468, "payment": 646367, "other": 29}, {"date": "2025-10-03", "account_creation": 3434, "login": 486491, "payment": 681187, "other": 31}, {"date": "2025-10-04", "account_creation": 2820, "login": 288769, "payment": 537845, "other": 21}, {"date": "2025-10-05", "account_creation": 2267, "login": 246236, "payment": 427674, "other": 6}, {"date": "2025-10-06", "account_creation": 3488, "login": 518411, "payment": 516271, "other": 31}, {"date": "2025-10-07", "account_creation": 3476, "login": 509522, "payment": 557977, "other": 21}, {"date": "2025-10-08", "account_creation": 3622, "login": 506035, "payment": 590026, "other": 29}, {"date": "2025-10-09", "account_creation": 3547, "login": 496051, "payment": 627782, "other": 35}, {"date": "2025-10-10", "account_creation": 3281, "login": 459180, "payment": 687378, "other": 37}, {"date": "2025-10-11", "account_creation": 2667, "login": 277263, "payment": 568062, "other": 24}, {"date": "2025-10-12", "account_creation": 2089, "login": 235502, "payment": 410752, "other": 12}, {"date": "2025-10-13", "account_creation": 3006, "login": 452482, "payment": 474025, "other": 20}, {"date": "2025-10-14", "account_creation": 3442, "login": 506045, "payment": 533870, "other": 26}, {"date": "2025-10-15", "account_creation": 3360, "login": 513644, "payment": 594832, "other": 37}, {"date": "2025-10-16", "account_creation": 3566, "login": 503577, "payment": 618616, "other": 39}, {"date": "2025-10-17", "account_creation": 3352, "login": 464963, "payment": 669315, "other": 29}, {"date": "2025-10-18", "account_creation": 2618, "login": 275289, "payment": 520644, "other": 16}, {"date": "2025-10-19", "account_creation": 2192, "login": 239409, "payment": 416839, "other": 12}, {"date": "2025-10-20", "account_creation": 3112, "login": 518862, "payment": 512047, "other": 21}, {"date": "2025-10-21", "account_creation": 3540, "login": 511543, "payment": 553364, "other": 27}, {"date": "2025-10-22", "account_creation": 3454, "login": 498076, "payment": 568572, "other": 30}, {"date": "2025-10-23", "account_creation": 3468, "login": 483988, "payment": 607319, "other": 24}, {"date": "2025-10-24", "account_creation": 3373, "login": 450230, "payment": 661394, "other": 44}, {"date": "2025-10-25", "account_creation": 2561, "login": 271177, "payment": 516954, "other": 21}, {"date": "2025-10-26", "account_creation": 2171, "login": 234466, "payment": 397956, "other": 12}, {"date": "2025-10-27", "account_creation": 3137, "login": 495156, "payment": 484895, "other": 39}, {"date": "2025-10-28", "account_creation": 3567, "login": 506377, "payment": 515144, "other": 29}, {"date": "2025-10-29", "account_creation": 3479, "login": 503528, "payment": 560826, "other": 33}, {"date": "2025-10-30", "account_creation": 3328, "login": 497994, "payment": 587954, "other": 31}, {"date": "2025-10-31", "account_creation": 3001, "login": 460660, "payment": 617268, "other": 34}, {"date": "2025-11-01", "account_creation": 2501, "login": 301965, "payment": 517879, "other": 13}, {"date": "2025-11-02", "account_creation": 2216, "login": 268729, "payment": 416212, "other": 16}, {"date": "2025-11-03", "account_creation": 3432, "login": 532740, "payment": 528914, "other": 26}, {"date": "2025-11-04", "account_creation": 3644, "login": 519426, "payment": 560010, "other": 25}, {"date": "2025-11-05", "account_creation": 3527, "login": 511401, "payment": 578902, "other": 26}, {"date": "2025-11-06", "account_creation": 3573, "login": 505752, "payment": 601438, "other": 28}, {"date": "2025-11-07", "account_creation": 3509, "login": 478413, "payment": 654350, "other": 30}, {"date": "2025-11-08", "account_creation": 2846, "login": 288518, "payment": 526059, "other": 19}, {"date": "2025-11-09", "account_creation": 2232, "login": 244450, "payment": 424965, "other": 8}, {"date": "2025-11-10", "account_creation": 3363, "login": 499764, "payment": 503153, "other": 29}, {"date": "2025-11-11", "account_creation": 3453, "login": 483158, "payment": 520683, "other": 20}, {"date": "2025-11-12", "account_creation": 3413, "login": 501880, "payment": 552837, "other": 22}, {"date": "2025-11-13", "account_creation": 3415, "login": 532548, "payment": 592707, "other": 28}, {"date": "2025-11-14", "account_creation": 3391, "login": 482937, "payment": 668226, "other": 30}, {"date": "2025-11-15", "account_creation": 2792, "login": 293130, "payment": 535201, "other": 21}, {"date": "2025-11-16", "account_creation": 2258, "login": 250253, "payment": 436232, "other": 14}, {"date": "2025-11-17", "account_creation": 3166, "login": 526892, "payment": 517928, "other": 26}, {"date": "2025-11-18", "account_creation": 3414, "login": 496937, "payment": 559552, "other": 24}, {"date": "2025-11-19", "account_creation": 3392, "login": 501916, "payment": 599129, "other": 22}, {"date": "2025-11-20", "account_creation": 3279, "login": 506122, "payment": 618562, "other": 29}, {"date": "2025-11-21", "account_creation": 3173, "login": 476917, "payment": 669877, "other": 30}, {"date": "2025-11-22", "account_creation": 2539, "login": 293430, "payment": 528563, "other": 15}, {"date": "2025-11-23", "account_creation": 2036, "login": 244414, "payment": 418448, "other": 6}, {"date": "2025-11-24", "account_creation": 2815, "login": 483942, "payment": 484717, "other": 32}, {"date": "2025-11-25", "account_creation": 3018, "login": 488277, "payment": 525771, "other": 37}, {"date": "2025-11-26", "account_creation": 2681, "login": 440622, "payment": 522452, "other": 29}, {"date": "2025-11-27", "account_creation": 1707, "login": 239726, "payment": 218808, "other": 12}, {"date": "2025-11-28", "account_creation": 2127, "login": 333686, "payment": 384618, "other": 21}, {"date": "2025-11-29", "account_creation": 2372, "login": 287592, "payment": 439982, "other": 18}, {"date": "2025-11-30", "account_creation": 2624, "login": 277109, "payment": 403295, "other": 8}, {"date": "2025-12-01", "account_creation": 3284, "login": 572224, "payment": 584010, "other": 32}, {"date": "2025-12-02", "account_creation": 3496, "login": 567226, "payment": 594307, "other": 25}, {"date": "2025-12-03", "account_creation": 3686, "login": 546513, "payment": 590576, "other": 32}, {"date": "2025-12-04", "account_creation": 3422, "login": 522564, "payment": 609047, "other": 36}, {"date": "2025-12-05", "account_creation": 3460, "login": 497558, "payment": 652357, "other": 35}, {"date": "2025-12-06", "account_creation": 2779, "login": 307096, "payment": 529261, "other": 17}, {"date": "2025-12-07", "account_creation": 2073, "login": 260596, "payment": 429442, "other": 15}, {"date": "2025-12-08", "account_creation": 2872, "login": 511535, "payment": 522442, "other": 20}, {"date": "2025-12-09", "account_creation": 5193, "login": 505009, "payment": 550343, "other": 25}, {"date": "2025-12-10", "account_creation": 7220, "login": 515422, "payment": 582598, "other": 21}, {"date": "2025-12-11", "account_creation": 3076, "login": 497613, "payment": 601795, "other": 21}, {"date": "2025-12-12", "account_creation": 2851, "login": 463253, "payment": 664014, "other": 33}, {"date": "2025-12-13", "account_creation": 2219, "login": 289429, "payment": 540491, "other": 20}, {"date": "2025-12-14", "account_creation": 1605, "login": 241257, "payment": 427130, "other": 12}, {"date": "2025-12-15", "account_creation": 2977, "login": 492893, "payment": 531569, "other": 25}, {"date": "2025-12-16", "account_creation": 3307, "login": 495068, "payment": 572049, "other": 23}, {"date": "2025-12-17", "account_creation": 2867, "login": 488132, "payment": 574908, "other": 24}, {"date": "2025-12-18", "account_creation": 2493, "login": 480295, "payment": 592581, "other": 27}, {"date": "2025-12-19", "account_creation": 2305, "login": 450077, "payment": 628504, "other": 40}, {"date": "2025-12-20", "account_creation": 1787, "login": 284673, "payment": 511541, "other": 18}, {"date": "2025-12-21", "account_creation": 1400, "login": 231744, "payment": 399559, "other": 14}, {"date": "2025-12-22", "account_creation": 2046, "login": 443863, "payment": 455718, "other": 25}, {"date": "2025-12-23", "account_creation": 1976, "login": 413048, "payment": 475493, "other": 31}, {"date": "2025-12-24", "account_creation": 1435, "login": 262860, "payment": 333814, "other": 20}, {"date": "2025-12-25", "account_creation": 1041, "login": 111987, "payment": 130507, "other": 9}, {"date": "2025-12-26", "account_creation": 1605, "login": 248896, "payment": 304298, "other": 18}, {"date": "2025-12-27", "account_creation": 1697, "login": 230775, "payment": 368746, "other": 13}, {"date": "2025-12-28", "account_creation": 1502, "login": 208173, "payment": 337672, "other": 11}, {"date": "2025-12-29", "account_creation": 2301, "login": 398941, "payment": 411248, "other": 24}, {"date": "2025-12-30", "account_creation": 2583, "login": 396660, "payment": 468654, "other": 17}, {"date": "2025-12-31", "account_creation": 2451, "login": 337653, "payment": 482154, "other": 22}, {"date": "2026-01-01", "account_creation": 1719, "login": 222922, "payment": 327488, "other": 9}, {"date": "2026-01-02", "account_creation": 2645, "login": 406296, "payment": 473787, "other": 21}, {"date": "2026-01-03", "account_creation": 2418, "login": 284187, "payment": 443168, "other": 16}, {"date": "2026-01-04", "account_creation": 2053, "login": 251855, "payment": 382485, "other": 11}, {"date": "2026-01-05", "account_creation": 2980, "login": 511009, "payment": 465792, "other": 23}, {"date": "2026-01-06", "account_creation": 3214, "login": 505050, "payment": 500890, "other": 30}, {"date": "2026-01-07", "account_creation": 3087, "login": 496313, "payment": 520964, "other": 19}, {"date": "2026-01-08", "account_creation": 3137, "login": 485960, "payment": 558611, "other": 28}, {"date": "2026-01-09", "account_creation": 2780, "login": 462047, "payment": 616951, "other": 23}, {"date": "2026-01-10", "account_creation": 2300, "login": 283418, "payment": 509686, "other": 19}, {"date": "2026-01-11", "account_creation": 2052, "login": 237351, "payment": 412939, "other": 12}, {"date": "2026-01-12", "account_creation": 2971, "login": 484633, "payment": 481490, "other": 25}, {"date": "2026-01-13", "account_creation": 3186, "login": 495300, "payment": 520771, "other": 24}, {"date": "2026-01-14", "account_creation": 3115, "login": 500232, "payment": 546457, "other": 26}, {"date": "2026-01-15", "account_creation": 3292, "login": 501622, "payment": 591114, "other": 31}, {"date": "2026-01-16", "account_creation": 3088, "login": 469704, "payment": 633600, "other": 34}, {"date": "2026-01-17", "account_creation": 2394, "login": 285828, "payment": 515440, "other": 12}, {"date": "2026-01-18", "account_creation": 2011, "login": 238846, "payment": 408868, "other": 7}, {"date": "2026-01-19", "account_creation": 2859, "login": 443257, "payment": 434803, "other": 17}, {"date": "2026-01-20", "account_creation": 3133, "login": 511800, "payment": 496166, "other": 23}, {"date": "2026-01-21", "account_creation": 3164, "login": 519217, "payment": 515960, "other": 27}, {"date": "2026-01-22", "account_creation": 3056, "login": 504745, "payment": 541870, "other": 28}, {"date": "2026-01-23", "account_creation": 2913, "login": 481814, "payment": 584337, "other": 39}, {"date": "2026-01-24", "account_creation": 2253, "login": 287818, "payment": 452751, "other": 23}, {"date": "2026-01-25", "account_creation": 2007, "login": 230040, "payment": 318040, "other": 17}, {"date": "2026-01-26", "account_creation": 2810, "login": 465706, "payment": 375942, "other": 33}, {"date": "2026-01-27", "account_creation": 3108, "login": 494642, "payment": 466894, "other": 24}, {"date": "2026-01-28", "account_creation": 3221, "login": 497568, "payment": 520733, "other": 9765}, {"date": "2026-01-29", "account_creation": 3037, "login": 501521, "payment": 564923, "other": 2074}, {"date": "2026-01-30", "account_creation": 2920, "login": 480089, "payment": 634666, "other": 34}, {"date": "2026-01-31", "account_creation": 2325, "login": 308727, "payment": 524637, "other": 18}, {"date": "2026-02-01", "account_creation": 2133, "login": 296183, "payment": 466091, "other": 24}, {"date": "2026-02-02", "account_creation": 3024, "login": 567548, "payment": 527468, "other": 35}, {"date": "2026-02-03", "account_creation": 3006, "login": 535234, "payment": 562800, "other": 38}, {"date": "2026-02-04", "account_creation": 3113, "login": 535689, "payment": 584725, "other": 28}, {"date": "2026-02-05", "account_creation": 3154, "login": 519328, "payment": 619255, "other": 40}, {"date": "2026-02-06", "account_creation": 3005, "login": 483875, "payment": 673719, "other": 29}, {"date": "2026-02-07", "account_creation": 2564, "login": 300526, "payment": 555344, "other": 19}, {"date": "2026-02-08", "account_creation": 2066, "login": 251938, "payment": 442917, "other": 13}, {"date": "2026-02-09", "account_creation": 2934, "login": 496165, "payment": 473059, "other": 25}, {"date": "2026-02-10", "account_creation": 3267, "login": 506183, "payment": 548960, "other": 34}, {"date": "2026-02-11", "account_creation": 3223, "login": 500344, "payment": 584215, "other": 33}, {"date": "2026-02-12", "account_creation": 3070, "login": 502261, "payment": 608358, "other": 36}, {"date": "2026-02-13", "account_creation": 2652, "login": 468813, "payment": 673637, "other": 20}, {"date": "2026-02-14", "account_creation": 2078, "login": 284911, "payment": 560205, "other": 21}, {"date": "2026-02-15", "account_creation": 1849, "login": 248039, "payment": 432015, "other": 17}, {"date": "2026-02-16", "account_creation": 2482, "login": 452964, "payment": 449991, "other": 23}, {"date": "2026-02-17", "account_creation": 9473, "login": 504887, "payment": 502803, "other": 36}, {"date": "2026-02-18", "account_creation": 13219, "login": 495567, "payment": 546898, "other": 30}, {"date": "2026-02-19", "account_creation": 14449, "login": 496012, "payment": 573465, "other": 35}, {"date": "2026-02-20", "account_creation": 13197, "login": 479938, "payment": 648946, "other": 31}, {"date": "2026-02-21", "account_creation": 4814, "login": 298618, "payment": 533428, "other": 25}, {"date": "2026-02-22", "account_creation": 2875, "login": 249505, "payment": 420252, "other": 17}, {"date": "2026-02-23", "account_creation": 3517, "login": 473373, "payment": 447346, "other": 31}, {"date": "2026-02-24", "account_creation": 3607, "login": 496831, "payment": 526081, "other": 43}, {"date": "2026-02-25", "account_creation": 2808, "login": 497132, "payment": 579113, "other": 46}, {"date": "2026-02-26", "account_creation": 3006, "login": 497122, "payment": 609453, "other": 44}, {"date": "2026-02-27", "account_creation": 2824, "login": 475744, "payment": 689740, "other": 43}, {"date": "2026-02-28", "account_creation": 2304, "login": 305969, "payment": 580938, "other": 24}];
+        const TMX_TARGET = 100000000;
+        const TMX_START_DATE = '2025-04-01';
+        let currentAggregation = 'week';
+        let activeEventTypes = { account_creation: true, login: true, payment: true, other: true };
+        let lineChart, donutChart, barChart;
+        const colors = { blue: '#3b82f6', green: '#10b981', purple: '#8b5cf6', orange: '#f59e0b' };
+        
+        // TMX Agreement Progress Calculation
+        function updateTmxProgress() {
+            // Filter data from April 1, 2025 onwards
+            const tmxData = allData.filter(d => d.date >= TMX_START_DATE);
+            
+            if (tmxData.length === 0) {
+                document.getElementById('tmxTotalEvents').textContent = '0';
+                document.getElementById('tmxRemaining').textContent = formatNum(TMX_TARGET);
+                document.getElementById('tmxPercentage').textContent = '0%';
+                document.getElementById('tmxProgressBar').style.width = '0%';
+                document.getElementById('tmxEstCompletion').textContent = 'N/A';
+                return;
+            }
+            
+            // Calculate total events since Apr 1, 2025 (excluding "other" events)
+            const totalEvents = tmxData.reduce((sum, d) => {
+                return sum + d.account_creation + d.login + d.payment;
+            }, 0);
+            
+            const remaining = Math.max(0, TMX_TARGET - totalEvents);
+            const percentage = Math.min(100, (totalEvents / TMX_TARGET) * 100);
+            
+            // Calculate daily average and estimate completion
+            const firstDate = new Date(tmxData[0].date + 'T00:00:00');
+            const lastDate = new Date(tmxData[tmxData.length - 1].date + 'T00:00:00');
+            const daysCovered = Math.max(1, Math.ceil((lastDate - firstDate) / (1000 * 60 * 60 * 24)) + 1);
+            const dailyAverage = totalEvents / daysCovered;
+            
+            let estCompletion = 'Achieved! 🎉';
+            if (remaining > 0 && dailyAverage > 0) {
+                const daysRemaining = Math.ceil(remaining / dailyAverage);
+                const completionDate = new Date(lastDate);
+                completionDate.setDate(completionDate.getDate() + daysRemaining);
+                estCompletion = completionDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            }
+            
+            // Update UI
+            document.getElementById('tmxTotalEvents').textContent = formatNum(totalEvents);
+            document.getElementById('tmxRemaining').textContent = formatNum(remaining);
+            document.getElementById('tmxPercentage').textContent = percentage.toFixed(1) + '%';
+            document.getElementById('tmxProgressBar').style.width = percentage + '%';
+            document.getElementById('tmxEstCompletion').textContent = estCompletion;
+            
+            // Change color if achieved
+            if (percentage >= 100) {
+                document.getElementById('tmxProgressBar').style.background = 'linear-gradient(90deg, #10b981, #059669)';
+            }
+        }
+        
+        // URL parameter handling for persistent settings
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                agg: params.get('agg') || 'week',
+                events: params.get('events') || 'account_creation,login,payment,other'
+            };
+        }
+        
+        function buildUrlParams() {
+            const activeEvents = Object.keys(activeEventTypes).filter(k => activeEventTypes[k]).join(',');
+            return `?agg=${currentAggregation}&events=${activeEvents}`;
+        }
+        
+        function updateYearLinks() {
+            const params = buildUrlParams();
+            document.querySelectorAll('.year-link[data-year]').forEach(link => {
+                const year = link.dataset.year;
+                link.href = `dashboard_${year}.html${params}`;
+            });
+        }
+        
+        function applyUrlParams() {
+            const params = getUrlParams();
+            
+            // Apply aggregation
+            currentAggregation = params.agg;
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.agg === currentAggregation);
+            });
+            const labels = { day: 'Daily', week: 'Weekly', month: 'Monthly' };
+            document.getElementById('chartAggLabel').textContent = labels[currentAggregation] || 'Weekly';
+            
+            // Apply event type filters
+            const activeEvents = params.events.split(',');
+            activeEventTypes = {
+                account_creation: activeEvents.includes('account_creation'),
+                login: activeEvents.includes('login'),
+                payment: activeEvents.includes('payment'),
+                other: activeEvents.includes('other')
+            };
+            
+            // Update checkboxes
+            document.querySelectorAll('.checkbox-label input[data-event]').forEach(checkbox => {
+                checkbox.checked = activeEventTypes[checkbox.dataset.event];
+            });
+            
+            updateYearLinks();
+        }
+        
+        function toggleEventType(eventType) {
+            activeEventTypes[eventType] = !activeEventTypes[eventType];
+            updateYearLinks();
+            updateDashboard();
+        }
+
+        function formatNum(n) {
+            if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+            return n.toLocaleString();
+        }
+
+        function formatDate(d) {
+            return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function getWeekStart(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            d.setDate(diff);
+            return d.toISOString().split('T')[0];
+        }
+
+        function aggregateData(data, level) {
+            if (level === 'day') return data;
+            
+            const grouped = {};
+            data.forEach(row => {
+                let key;
+                if (level === 'week') {
+                    key = getWeekStart(row.date);
+                } else {
+                    key = row.date.substring(0, 7) + '-01';
+                }
+                if (!grouped[key]) {
+                    grouped[key] = { date: key, account_creation: 0, login: 0, payment: 0, other: 0 };
+                }
+                grouped[key].account_creation += row.account_creation;
+                grouped[key].login += row.login;
+                grouped[key].payment += row.payment;
+                grouped[key].other += row.other;
+            });
+            return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
+        }
+
+        function setAggregation(level) {
+            currentAggregation = level;
+            document.querySelectorAll('.toggle-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.agg === level);
+            });
+            const labels = { day: 'Daily', week: 'Weekly', month: 'Monthly' };
+            document.getElementById('chartAggLabel').textContent = labels[level];
+            updateYearLinks();
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            const data = rawData;
+            
+            // Calculate totals
+            const totals = data.reduce((a, r) => {
+                a.account_creation += r.account_creation;
+                a.login += r.login;
+                a.payment += r.payment;
+                a.other += r.other;
+                return a;
+            }, { account_creation: 0, login: 0, payment: 0, other: 0 });
+
+            document.getElementById('totalAccountCreation').textContent = formatNum(totals.account_creation);
+            document.getElementById('totalLogin').textContent = formatNum(totals.login);
+            document.getElementById('totalPayment').textContent = formatNum(totals.payment);
+            document.getElementById('totalOther').textContent = formatNum(totals.other);
+
+            // Update date range text
+            if (data.length > 0) {
+                const start = formatDate(data[0].date);
+                const end = formatDate(data[data.length-1].date);
+                document.getElementById('dateRangeText').textContent = `Event analytics for 2026 (${start} - ${end})`;
+            }
+
+            const aggData = aggregateData(data, currentAggregation);
+            
+            // Build datasets based on active event types
+            const lineDatasets = [];
+            const donutLabels = [];
+            const donutData = [];
+            const donutColors = [];
+            const barDatasets = [];
+            
+            if (activeEventTypes.account_creation) {
+                lineDatasets.push({ label: 'Account Creation', data: aggData.map(d => d.account_creation), borderColor: colors.blue, backgroundColor: 'transparent', tension: 0.3, borderWidth: 2, pointRadius: currentAggregation === 'day' ? 0 : 3 });
+                donutLabels.push('Account Creation'); donutData.push(totals.account_creation); donutColors.push(colors.blue);
+            }
+            if (activeEventTypes.login) {
+                lineDatasets.push({ label: 'Login', data: aggData.map(d => d.login), borderColor: colors.green, backgroundColor: 'transparent', tension: 0.3, borderWidth: 2, pointRadius: currentAggregation === 'day' ? 0 : 3 });
+                donutLabels.push('Login'); donutData.push(totals.login); donutColors.push(colors.green);
+            }
+            if (activeEventTypes.payment) {
+                lineDatasets.push({ label: 'Payment', data: aggData.map(d => d.payment), borderColor: colors.purple, backgroundColor: 'transparent', tension: 0.3, borderWidth: 2, pointRadius: currentAggregation === 'day' ? 0 : 3 });
+                donutLabels.push('Payment'); donutData.push(totals.payment); donutColors.push(colors.purple);
+            }
+            if (activeEventTypes.other) {
+                lineDatasets.push({ label: 'Other', data: aggData.map(d => d.other), borderColor: colors.orange, backgroundColor: 'transparent', tension: 0.3, borderWidth: 2, pointRadius: currentAggregation === 'day' ? 0 : 3 });
+                donutLabels.push('Other'); donutData.push(totals.other); donutColors.push(colors.orange);
+            }
+
+            // Line Chart
+            if (lineChart) lineChart.destroy();
+            lineChart = new Chart(document.getElementById('lineChart'), {
+                type: 'line',
+                data: { labels: aggData.map(d => formatDate(d.date)), datasets: lineDatasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: { legend: { position: 'top', labels: { usePointStyle: true, padding: 16 } } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 12 } },
+                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { callback: v => formatNum(v) } }
+                    }
+                }
+            });
+
+            // Donut Chart
+            if (donutChart) donutChart.destroy();
+            const donutTotal = donutData.reduce((a, b) => a + b, 0);
+            donutChart = new Chart(document.getElementById('donutChart'), {
+                type: 'doughnut',
+                data: { labels: donutLabels, datasets: [{ data: donutData, backgroundColor: donutColors, borderWidth: 0 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '65%',
+                    plugins: {
+                        legend: { position: 'right', labels: { usePointStyle: true, padding: 12 } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const percentage = ((value / donutTotal) * 100).toFixed(1);
+                                    return `${context.label}: ${formatNum(value)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Bar Chart - Monthly
+            const monthly = {};
+            data.forEach(r => {
+                const m = r.date.substring(0, 7);
+                if (!monthly[m]) monthly[m] = { account_creation: 0, login: 0, payment: 0, other: 0 };
+                monthly[m].account_creation += r.account_creation;
+                monthly[m].login += r.login;
+                monthly[m].payment += r.payment;
+                monthly[m].other += r.other;
+            });
+            const months = Object.keys(monthly).sort();
+            
+            if (activeEventTypes.account_creation) barDatasets.push({ label: 'Account Creation', data: months.map(m => monthly[m].account_creation), backgroundColor: colors.blue, borderRadius: 4 });
+            if (activeEventTypes.login) barDatasets.push({ label: 'Login', data: months.map(m => monthly[m].login), backgroundColor: colors.green, borderRadius: 4 });
+            if (activeEventTypes.payment) barDatasets.push({ label: 'Payment', data: months.map(m => monthly[m].payment), backgroundColor: colors.purple, borderRadius: 4 });
+            if (activeEventTypes.other) barDatasets.push({ label: 'Other', data: months.map(m => monthly[m].other), backgroundColor: colors.orange, borderRadius: 4 });
+
+            if (barChart) barChart.destroy();
+            barChart = new Chart(document.getElementById('barChart'), {
+                type: 'bar',
+                data: { labels: months.map(m => new Date(m + '-01').toLocaleDateString('en-US', { month: 'short' })), datasets: barDatasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top', labels: { usePointStyle: true, padding: 12 } } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { callback: v => formatNum(v) } }
+                    }
+                }
+            });
+        }
+
+        // Initialize - apply URL params first, then update dashboard
+        applyUrlParams();
+        updateDashboard();
+        updateTmxProgress();
+    </script>
+</body>
+</html>
